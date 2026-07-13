@@ -8,70 +8,135 @@ public class BossMove : MonoBehaviour
     public int nextMove;
     SpriteRenderer spriteRenderer;
     public Health health;
-
     CapsuleCollider2D capsuleCollider;
-    // Start is called before the first frame update
+    
+    private Animator anim;
+    private Transform player;
+    
+    [SerializeField] float moveSpeed = 1.5f;
+    [SerializeField] float chaseRange = 15f;
+    
+    private bool isCharging = false;
+    private bool isDead = false;
+
     void Awake() {
         rigid = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
         health = GetComponent<Health>();
+        anim = GetComponent<Animator>();
+        
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null) {
+            player = playerObj.transform;
+        }
+        
         Invoke("Think", 0);
+        InvokeRepeating("AttemptCharge", 4f, 6f); // Try to charge every 6 seconds
     }
 
-    // Update is called once per frame
     void FixedUpdate() {
-        //Move
-        rigid.linearVelocity =  new Vector2(nextMove, rigid.linearVelocity.y);
+        if (isDead) return;
 
-        //Platform Check
+        // Move
+        if (!isCharging) {
+            // If player is close, move towards player
+            if (player != null && Vector2.Distance(transform.position, player.position) < chaseRange) {
+                float direction = player.position.x - transform.position.x;
+                nextMove = direction > 0 ? 1 : -1;
+                spriteRenderer.flipX = (nextMove == 1);
+            }
+            rigid.linearVelocity = new Vector2(nextMove * moveSpeed, rigid.linearVelocity.y);
+        }
+
+        if (anim != null) {
+            anim.SetBool("isWalking", nextMove != 0 && !isCharging);
+        }
+
+        // Platform / Wall Check
         Vector2 frontVec = new Vector2(rigid.position.x + nextMove * 0.5f, rigid.position.y);
         Debug.DrawRay(frontVec, Vector3.down, new Color(0,1,0));
-        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(rigid.linearVelocity.x), 0), 3, LayerMask.GetMask("Platform"));
-        if(rayHit.collider != null){
-            if(rayHit.distance < 0.5f){
-                nextMove *= -1;
-                CancelInvoke();
+        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(nextMove), 0), 1.5f, LayerMask.GetMask("Platform"));
+        if(rayHit.collider != null && rayHit.distance < 0.8f){
+            nextMove *= -1;
+            if (!isCharging) {
+                CancelInvoke("Think");
                 Invoke("Think", 0);
             }
         }
     }
 
     void Think(){
-        //랜덤에서 최댓값은 랜덤에 포함이 안됨
-        nextMove = Random.Range(-1, 2);
+        if (isDead || isCharging) return;
 
-        float nextThinkTime;
-        if(nextMove !=0)
-            nextThinkTime = Random.Range(2f,5f);
-        else
-            nextThinkTime = Random.Range(0.5f,1f);
+        // Random movement when not chasing
+        if (player == null || Vector2.Distance(transform.position, player.position) >= chaseRange) {
+            nextMove = Random.Range(-1, 2);
+            if(nextMove != 0)
+                spriteRenderer.flipX = (nextMove == 1);
+        }
 
+        float nextThinkTime = nextMove != 0 ? Random.Range(2f, 5f) : Random.Range(0.5f, 1f);
         Invoke("Think", nextThinkTime);
-        if(nextMove !=0)
-            spriteRenderer.flipX = (nextMove == 1);
+    }
+
+    void AttemptCharge() {
+        if (isDead || isCharging) return;
+        if (player == null || Vector2.Distance(transform.position, player.position) > chaseRange) return;
+
+        StartCoroutine(ChargeRoutine());
+    }
+
+    IEnumerator ChargeRoutine() {
+        isCharging = true;
+        nextMove = 0;
+        rigid.linearVelocity = new Vector2(0, rigid.linearVelocity.y);
+
+        // Warning phase (Flash red or shake)
+        float elapsed = 0f;
+        while (elapsed < 0.8f) {
+            spriteRenderer.color = (elapsed * 10) % 2 > 1 ? new Color(1, 0.3f, 0.3f, 1) : Color.white;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        spriteRenderer.color = Color.white;
+
+        // Charge phase
+        float chargeDir = player.position.x - transform.position.x > 0 ? 1 : -1;
+        spriteRenderer.flipX = (chargeDir == 1);
+        nextMove = (int)chargeDir;
+        
+        rigid.AddForce(new Vector2(chargeDir * 12f, 0), ForceMode2D.Impulse);
+
+        yield return new WaitForSeconds(1.2f); // Dash duration
+        
+        isCharging = false;
+        Think();
     }
 
     public void OnDamaged(){
+        if (isDead) return;
+
         if(health.currentHealth <= 0) {
-            //Sprite Alpha
-            spriteRenderer.color = new Color(1,1,1,0.4f);
-            //Sprite Flip Y
+            isDead = true;
+            CancelInvoke();
+            StopAllCoroutines();
+
+            if (anim != null) anim.SetTrigger("die");
+            spriteRenderer.color = new Color(1, 1, 1, 0.4f);
             spriteRenderer.flipY = true;
-            //Collider Disable
             capsuleCollider.enabled = false;
-            //Die Effect Jump
-            rigid.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
+            rigid.AddForce(Vector2.up * 6, ForceMode2D.Impulse);
             return;
         }
-        //Sprite Alpha
-        spriteRenderer.color = new Color(1,1,1,0.4f);
-        //Destroy
-        Invoke("DeActive", 3);
+
+        if (anim != null) anim.SetTrigger("hurt");
+        StartCoroutine(HurtFlashRoutine());
     }
 
-    void DeActive(){
-        gameObject.SetActive(false);
+    IEnumerator HurtFlashRoutine() {
+        spriteRenderer.color = new Color(1, 0.4f, 0.4f, 0.6f);
+        yield return new WaitForSeconds(0.2f);
+        spriteRenderer.color = Color.white;
     }
-    
 }

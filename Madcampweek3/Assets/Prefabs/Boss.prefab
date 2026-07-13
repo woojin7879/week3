@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 2675580747616566033}
   - component: {fileID: 2675580747616566034}
   - component: {fileID: 2675580747616566045}
+  - component: {fileID: 2675580747616566100}
   m_Layer: 9
   m_Name: Boss
   m_TagString: Boss
@@ -160,7 +161,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69fabce120c45aa4d8001629d380d271, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startingHealth: 1
+  startingHealth: 3
   currentHealth: 0
   hurt: 0
 --- !u!70 &2675580747616566045
@@ -179,3 +180,21 @@ CapsuleCollider2D:
   m_Offset: {x: -0.04293852, y: 0.0049544335}
   m_Size: {x: 0.67744774, y: 1.0165148}
   m_Direction: 0
+--- !u!95 &2675580747616566100
+Animator:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2675580747616566036}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 3294ea4068ccb9048f0cac7073c4213c, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityVelocity: {x: 0, y: 0, z: 0}
+  m_AngularVelocityVelocity: 0
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
