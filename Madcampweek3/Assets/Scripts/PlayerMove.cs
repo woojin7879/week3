@@ -58,8 +58,8 @@ public class PlayerMove : MonoBehaviour
 
         //Stop speed when no input
          if(Input.GetButtonUp("Horizontal")){
-            if(int.Parse(SceneManager.GetActiveScene().name) >=10) rigid.velocity = new Vector2(rigid.velocity.normalized.x * 0.5f, rigid.velocity.y);
-            else rigid.velocity = new Vector2(0, rigid.velocity.y);
+            if(int.Parse(SceneManager.GetActiveScene().name) >=10) rigid.linearVelocity = new Vector2(rigid.linearVelocity.normalized.x * 0.5f, rigid.linearVelocity.y);
+            else rigid.linearVelocity = new Vector2(0, rigid.linearVelocity.y);
          }
 
         //Direction change
@@ -71,7 +71,7 @@ public class PlayerMove : MonoBehaviour
         }
 
         //walk animation setting
-        if(Mathf.Abs(rigid.velocity.x)< 0.3 || isGliding)
+        if(Mathf.Abs(rigid.linearVelocity.x)< 0.3 || isGliding)
             anim.SetBool("isWalking", false);
         else
             anim.SetBool("isWalking", true);
@@ -106,17 +106,17 @@ public class PlayerMove : MonoBehaviour
         }
 
         //Maxspeed control
-        if (rigid.velocity.x > maxSpeed && isGrounded())
-            rigid.velocity = new Vector2(maxSpeed, rigid.velocity.y);
-        else if (rigid.velocity.x < maxSpeed * (-1) && isGrounded())
-            rigid.velocity = new Vector2(maxSpeed * (-1), rigid.velocity.y);
-        if (rigid.velocity.x > 5)
-            rigid.velocity = new Vector2(5, rigid.velocity.y);
-        else if (rigid.velocity.x < 5 * (-1))
-            rigid.velocity = new Vector2(5 * (-1), rigid.velocity.y);
+        if (rigid.linearVelocity.x > maxSpeed && isGrounded())
+            rigid.linearVelocity = new Vector2(maxSpeed, rigid.linearVelocity.y);
+        else if (rigid.linearVelocity.x < maxSpeed * (-1) && isGrounded())
+            rigid.linearVelocity = new Vector2(maxSpeed * (-1), rigid.linearVelocity.y);
+        if (rigid.linearVelocity.x > 5)
+            rigid.linearVelocity = new Vector2(5, rigid.linearVelocity.y);
+        else if (rigid.linearVelocity.x < 5 * (-1))
+            rigid.linearVelocity = new Vector2(5 * (-1), rigid.linearVelocity.y);
 
         //Landing Platform
-        if(rigid.velocity.y<0){
+        if(rigid.linearVelocity.y<0){
             Debug.DrawRay(rigid.position, Vector3.down, new Color(0,1,0));
             if(isGrounded()){
                 glideCooldown = 0;
@@ -135,7 +135,7 @@ public class PlayerMove : MonoBehaviour
             SoundManager.instance.PlaySound(walljumpSound);
             anim.SetBool("isWalljumping", true);
             wallJumpCooldown = 0;
-            rigid.velocity = new Vector2(-Mathf.Sign(transform.localScale.x)*5, 20);
+            rigid.linearVelocity = new Vector2(-Mathf.Sign(transform.localScale.x)*5, 20);
             transform.localScale = new Vector3(-Mathf.Sign(transform.localScale.x), transform.localScale.y, transform.localScale.z);
             anim.SetBool("isJumping", true);
         }
@@ -144,7 +144,7 @@ public class PlayerMove : MonoBehaviour
     void OnCollisionEnter2D(Collision2D collision) {
         if(collision.gameObject.tag == "Enemy"){
             //Attack
-            if(rigid.velocity.y < 0 && transform.position.y > collision.transform.position.y){
+            if(rigid.linearVelocity.y < 0 && transform.position.y > collision.transform.position.y){
                 OnAttack(collision.transform);
             }else{
                 health.TakeDamage(1);
@@ -157,7 +157,7 @@ public class PlayerMove : MonoBehaviour
         }
         if(collision.gameObject.tag == "Boss"){
             //Attack
-            if(rigid.velocity.y < 0 && transform.position.y > collision.transform.position.y){
+            if(rigid.linearVelocity.y < 0 && transform.position.y > collision.transform.position.y){
                 OnAttackBoss(collision.transform);
             }else{
                 health.TakeDamage(1);
@@ -189,7 +189,7 @@ public class PlayerMove : MonoBehaviour
         }
         if(collision.gameObject.tag == "Fake"){
             Debug.Log("Fake!!!!!!!!!!!!!!!!");
-            if(rigid.velocity.y > 0 && transform.position.y < collision.transform.position.y){
+            if(rigid.linearVelocity.y > 0 && transform.position.y < collision.transform.position.y){
                 Debug.Log("Hit!!!!!!!!!!!!!!!!!!!!");
                 collision.GetComponent<BoxCollider2D>().isTrigger = false;
                 collision.GetComponent<SpriteRenderer>().color = new Color(1,1,1,1);
@@ -251,7 +251,7 @@ public class PlayerMove : MonoBehaviour
     }
 
     public void VelocityZero(){
-        rigid.velocity = Vector2.zero;
+        rigid.linearVelocity = Vector2.zero;
     }
 
     private bool isGrounded() {

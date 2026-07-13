@@ -114,4 +114,12 @@ public class GameManager : MonoBehaviour
         StageNum.color = color;
     }
 
+    public void ExitGame()
+    {
+        #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
+            Application.Quit();
+        #endif
+    }
 }

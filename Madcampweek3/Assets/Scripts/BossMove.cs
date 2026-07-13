@@ -22,12 +22,12 @@ public class BossMove : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate() {
         //Move
-        rigid.velocity =  new Vector2(nextMove, rigid.velocity.y);
+        rigid.linearVelocity =  new Vector2(nextMove, rigid.linearVelocity.y);
 
         //Platform Check
         Vector2 frontVec = new Vector2(rigid.position.x + nextMove * 0.5f, rigid.position.y);
         Debug.DrawRay(frontVec, Vector3.down, new Color(0,1,0));
-        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(rigid.velocity.x), 0), 3, LayerMask.GetMask("Platform"));
+        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(rigid.linearVelocity.x), 0), 3, LayerMask.GetMask("Platform"));
         if(rayHit.collider != null){
             if(rayHit.distance < 0.5f){
                 nextMove *= -1;
