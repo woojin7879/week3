@@ -5,9 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 public class TextScript3 : MonoBehaviour
 {
-    
-public Text ScriptTxt;
-    int Gold = 0;          
+    public Text ScriptTxt;
     int cnt = 0;          
     Color color;
     public Image image;

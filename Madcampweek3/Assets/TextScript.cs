@@ -8,7 +8,6 @@ public class TextScript : MonoBehaviour
     public Image dad;
  public Image mom;
 public Text ScriptTxt;
-    int Gold = 0;          
     int cnt = 0;          
     Color color1;
     Color color2;

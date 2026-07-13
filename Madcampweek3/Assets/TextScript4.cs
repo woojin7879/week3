@@ -7,7 +7,6 @@ public class TextScript4 : MonoBehaviour
 {
     
 public Text ScriptTxt;
-    int Gold = 0;          
     int cnt = 0;        
     Color color;
     public Image image;  

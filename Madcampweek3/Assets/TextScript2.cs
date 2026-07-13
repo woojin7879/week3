@@ -9,7 +9,6 @@ public class TextScript2 : MonoBehaviour
 public Text ScriptTxt;
 public Image image;
 Color color;
-    int Gold = 0;          
     int cnt = 0;          
     string[] intro = new string[]{"봄을 무사히 보낸 다람이", "어느덧 여름이 찾아오는데..","다람이는 사실 날다람쥐였다..!"};
     // Use this for initialization
