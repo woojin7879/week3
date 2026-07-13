@@ -47,7 +47,10 @@ public class GameManager : MonoBehaviour
     
     public void NextStage()
     {
-    
+        // Save highest cleared level when the stage is cleared (Normal Mode only)
+        if (PlayerPrefs.GetInt("GameMode", 0) == 0) {
+            PlayerPrefs.SetInt("highestClearedLevel", Mathf.Max(PlayerPrefs.GetInt("highestClearedLevel", 0), stage));
+        }
 
         //Game Clear
         //Player Control Lock
@@ -69,8 +72,23 @@ public class GameManager : MonoBehaviour
 
     public void PlayerReposition(){
         CancelInvoke();
-        PlayerPrefs.SetInt("trycount",trycount);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        
+        int gameMode = PlayerPrefs.GetInt("GameMode", 0);
+        if (gameMode == 2) { // Hell Mode (2)
+            if (GameModeManager.Instance != null) {
+                GameModeManager.Instance.ResetTimer();
+            }
+            trycount = 0;
+            PlayerPrefs.SetInt("trycount", 0);
+            SceneManager.LoadScene("1");
+        } else {
+            if (gameMode == 1) { // Time Attack (1)
+                int d = PlayerPrefs.GetInt("timeAttackDeaths", 0);
+                PlayerPrefs.SetInt("timeAttackDeaths", d + 1);
+            }
+            PlayerPrefs.SetInt("trycount", trycount);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
         // player.transform.position = new Vector3(0, 0, 0);
         // player.transform.localScale = Vector3.one;
         // playerHealth.currentHealth = 3;
@@ -89,9 +107,41 @@ public class GameManager : MonoBehaviour
 
     public void NextPlayerReposition(){
         PlayerPrefs.SetInt("trycount",trycount-1);
+        
+        int gameMode = PlayerPrefs.GetInt("GameMode", 0);
         if(stage%3 == 0) {
-            if(stage == 12) SceneManager.LoadScene("ending");
-            else SceneManager.LoadScene("scene1");
+            if(stage == 12) {
+                // Game cleared! Update best clear times (Top 3)
+                if (GameModeManager.Instance != null) {
+                    float clearTime = GameModeManager.Instance.elapsedTime;
+                    int deaths = PlayerPrefs.GetInt("timeAttackDeaths", 0);
+                    if (gameMode == 1) { // Time Attack
+                        SaveTop3Time("bestTimeAttack", clearTime, deaths);
+                    } else if (gameMode == 2) { // Hell Mode
+                        SaveTop3Time("bestHellTime", clearTime, 0);
+                    }
+
+                    // Save to history log (newest first)
+                    string modeName = (gameMode == 1) ? "타임어택" : "헬 모드";
+                    string dateStr = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                    string recordEntry = $"{modeName}|{clearTime}|{dateStr}|{deaths}";
+                    
+                    string history = PlayerPrefs.GetString("speedrunHistory", "");
+                    if (string.IsNullOrEmpty(history)) {
+                        history = recordEntry;
+                    } else {
+                        history = recordEntry + ";" + history;
+                    }
+                    PlayerPrefs.SetString("speedrunHistory", history);
+                }
+                SceneManager.LoadScene("ending");
+            } else {
+                if (gameMode == 1 || gameMode == 2) { // TimeAttack (1) or Hell (2)
+                    SceneManager.LoadScene((stage+1).ToString());
+                } else {
+                    SceneManager.LoadScene("scene1");
+                }
+            }
         }
         else SceneManager.LoadScene((stage+1).ToString());
         // player.transform.position = new Vector3(0, 0, 0);
@@ -121,5 +171,25 @@ public class GameManager : MonoBehaviour
         #else
             Application.Quit();
         #endif
+    }
+
+    private void SaveTop3Time(string prefix, float newTime, int deaths) {
+        List<System.Tuple<float, int>> records = new List<System.Tuple<float, int>>();
+        for (int i = 0; i < 3; i++) {
+            float val = PlayerPrefs.GetFloat(prefix + "_" + i, 999999f);
+            if (val < 999998f) {
+                int d = PlayerPrefs.GetInt(prefix + "_" + i + "_deaths", 0);
+                records.Add(new System.Tuple<float, int>(val, d));
+            }
+        }
+        records.Add(new System.Tuple<float, int>(newTime, deaths));
+        records.Sort((a, b) => a.Item1.CompareTo(b.Item1)); // Sort by time ascending
+
+        for (int i = 0; i < 3; i++) {
+            if (i < records.Count) {
+                PlayerPrefs.SetFloat(prefix + "_" + i, records[i].Item1);
+                PlayerPrefs.SetInt(prefix + "_" + i + "_deaths", records[i].Item2);
+            }
+        }
     }
 }

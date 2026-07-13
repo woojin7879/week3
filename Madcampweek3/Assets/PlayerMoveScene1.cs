@@ -16,6 +16,7 @@ public class PlayerMoveScene1 : MonoBehaviour
     private int selectedUIIndex = 0;
     private Image[] uiButtonImages = new Image[4];
     private System.Action[] uiActions = new System.Action[4];
+    private bool[] isButtonEnabled = new bool[4];
 
     // Colors for selection state
     private readonly Color normalColor = new Color(0.15f, 0.15f, 0.15f, 0.9f);
@@ -77,21 +78,31 @@ public class PlayerMoveScene1 : MonoBehaviour
 
     private void HandleUINavigation()
     {
+        // ESC key to close sub-stage selection
+        if (Input.GetKeyDown(KeyCode.Escape)) {
+            CloseSubStageUI();
+            return;
+        }
+
         // Navigate down
         if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.RightArrow)) {
-            uiButtonImages[selectedUIIndex].color = normalColor;
-            selectedUIIndex = (selectedUIIndex + 1) % 4;
+            uiButtonImages[selectedUIIndex].color = isButtonEnabled[selectedUIIndex] ? normalColor : new Color(0.1f, 0.1f, 0.1f, 0.4f);
+            do {
+                selectedUIIndex = (selectedUIIndex + 1) % 4;
+            } while (!isButtonEnabled[selectedUIIndex]);
             uiButtonImages[selectedUIIndex].color = highlightColor;
         }
         // Navigate up
         else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.LeftArrow)) {
-            uiButtonImages[selectedUIIndex].color = normalColor;
-            selectedUIIndex = (selectedUIIndex - 1 + 4) % 4;
+            uiButtonImages[selectedUIIndex].color = isButtonEnabled[selectedUIIndex] ? normalColor : new Color(0.1f, 0.1f, 0.1f, 0.4f);
+            do {
+                selectedUIIndex = (selectedUIIndex - 1 + 4) % 4;
+            } while (!isButtonEnabled[selectedUIIndex]);
             uiButtonImages[selectedUIIndex].color = highlightColor;
         }
         // Select with Space
         else if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)) {
-            if (uiActions[selectedUIIndex] != null) {
+            if (isButtonEnabled[selectedUIIndex] && uiActions[selectedUIIndex] != null) {
                 uiActions[selectedUIIndex]();
             }
         }
@@ -101,6 +112,17 @@ public class PlayerMoveScene1 : MonoBehaviour
     {
         isUIActive = true;
         selectedUIIndex = 0;
+
+        // Retrieve level progress (Normal Mode only checks highestClearedLevel)
+        int stagePrefs = PlayerPrefs.GetInt("stage", 1);
+        int defaultHighestCleared = (stagePrefs - 1) * 3;
+        int highestClearedLevel = Mathf.Max(PlayerPrefs.GetInt("highestClearedLevel", 0), defaultHighestCleared);
+
+        // Determine which sub-levels are unlocked
+        isButtonEnabled[0] = true; // Level X-1 is always unlocked if stage group is unlocked
+        isButtonEnabled[1] = ((stagenum - 1) * 3 + 1 <= highestClearedLevel); // Level X-2 is unlocked if X-1 is cleared
+        isButtonEnabled[2] = ((stagenum - 1) * 3 + 2 <= highestClearedLevel); // Level X-3 is unlocked if X-2 is cleared
+        isButtonEnabled[3] = true; // Cancel button is always unlocked
         
         // 1. Create Canvas
         uiCanvasInstance = new GameObject("SubStageCanvas");
@@ -136,7 +158,7 @@ public class PlayerMoveScene1 : MonoBehaviour
         titleGo.transform.SetParent(panelGo.transform, false);
         Text titleText = titleGo.AddComponent<Text>();
         titleText.text = $"Select Level (Stage {stagenum})";
-        titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         titleText.color = Color.white;
         titleText.fontSize = 32;
         titleText.fontStyle = FontStyle.Bold;
@@ -175,10 +197,10 @@ public class PlayerMoveScene1 : MonoBehaviour
         };
 
         // 5. Instantiate Buttons
-        CreateUIButton(0, panelGo.transform, $"Story & Level {stagenum}-1", new Vector2(0, 50));
-        CreateUIButton(1, panelGo.transform, $"Level {stagenum}-2", new Vector2(0, -10));
-        CreateUIButton(2, panelGo.transform, $"Level {stagenum}-3", new Vector2(0, -70));
-        CreateUIButton(3, panelGo.transform, "Cancel", new Vector2(0, -140));
+        CreateUIButton(0, panelGo.transform, $"Story & Level {stagenum}-1", new Vector2(0, 50), isButtonEnabled[0]);
+        CreateUIButton(1, panelGo.transform, $"Level {stagenum}-2", new Vector2(0, -10), isButtonEnabled[1]);
+        CreateUIButton(2, panelGo.transform, $"Level {stagenum}-3", new Vector2(0, -70), isButtonEnabled[2]);
+        CreateUIButton(3, panelGo.transform, "Cancel", new Vector2(0, -140), isButtonEnabled[3]);
 
         // Highlight the initial selected button
         uiButtonImages[selectedUIIndex].color = highlightColor;
@@ -192,20 +214,26 @@ public class PlayerMoveScene1 : MonoBehaviour
         isUIActive = false;
     }
 
-    private void CreateUIButton(int index, Transform parent, string label, Vector2 position)
+    private void CreateUIButton(int index, Transform parent, string label, Vector2 position, bool isEnabled)
     {
         GameObject btnGo = new GameObject("Button_" + label);
         btnGo.transform.SetParent(parent, false);
         
         Button btn = btnGo.AddComponent<Button>();
         Image img = btnGo.AddComponent<Image>();
-        img.color = normalColor;
-        btn.targetGraphic = img;
-        btn.onClick.AddListener(() => {
-            if (uiActions[index] != null) {
-                uiActions[index]();
-            }
-        });
+        
+        if (isEnabled) {
+            img.color = normalColor;
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(() => {
+                if (uiActions[index] != null) {
+                    uiActions[index]();
+                }
+            });
+        } else {
+            img.color = new Color(0.1f, 0.1f, 0.1f, 0.4f); // Greyed out locked button
+            btn.interactable = false; // Disable button interactions
+        }
         
         uiButtonImages[index] = img; // Store Image reference for highlighting
 
@@ -216,9 +244,9 @@ public class PlayerMoveScene1 : MonoBehaviour
         GameObject textGo = new GameObject("Text");
         textGo.transform.SetParent(btnGo.transform, false);
         Text text = textGo.AddComponent<Text>();
-        text.text = label;
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        text.color = Color.white;
+        text.text = isEnabled ? label : label + " (Locked)";
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.color = isEnabled ? Color.white : new Color(0.6f, 0.6f, 0.6f, 0.5f);
         text.fontSize = 18;
         text.alignment = TextAnchor.MiddleCenter;
         

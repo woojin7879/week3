@@ -14,6 +14,36 @@ public class EndingScript : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        int gameMode = PlayerPrefs.GetInt("GameMode", 0);
+        if (gameMode == 1 || gameMode == 2) { // Time Attack (1) or Hell (2)
+            float finalTime = 0f;
+            if (GameModeManager.Instance != null) {
+                finalTime = GameModeManager.Instance.elapsedTime;
+            }
+            int deaths = PlayerPrefs.GetInt("timeAttackDeaths", 0);
+            
+            string modeName = gameMode == 1 ? "타임어택" : "헬 모드";
+            int minutes = (int)(finalTime / 60f);
+            int seconds = (int)(finalTime % 60f);
+            int fraction = (int)((finalTime * 100f) % 100f);
+            string timeStr = $"{minutes:00}:{seconds:00}.{fraction:00}";
+
+            if (gameMode == 1) {
+                intro = new string[] {
+                    $"축하합니다! {modeName} 클리어!",
+                    $"최종 클리어 시간: {timeStr}",
+                    $"총 사망 횟수: {deaths}회",
+                    "스페이스바를 누르면 타이틀로 돌아갑니다."
+                };
+            } else {
+                intro = new string[] {
+                    $"축하합니다! 헬 모드 클리어!",
+                    $"최종 클리어 시간: {timeStr}",
+                    "단 한 번도 죽지 않고 생존에 성공했습니다!",
+                    "스페이스바를 누르면 타이틀로 돌아갑니다."
+                };
+            }
+        }
         ScriptTxt.text = intro[0];
     }
     

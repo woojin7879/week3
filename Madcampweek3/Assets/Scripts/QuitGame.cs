@@ -83,7 +83,7 @@ public class QuitGame : MonoBehaviour
         titleGo.transform.SetParent(panelGo.transform, false);
         Text titleText = titleGo.AddComponent<Text>();
         titleText.text = "PAUSED";
-        titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         titleText.color = Color.white;
         titleText.fontSize = 50;
         titleText.fontStyle = FontStyle.Bold;
@@ -125,7 +125,7 @@ public class QuitGame : MonoBehaviour
         textGo.transform.SetParent(buttonGo.transform, false);
         Text text = textGo.AddComponent<Text>();
         text.text = buttonText;
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         text.color = Color.white;
         text.fontSize = 20;
         text.alignment = TextAnchor.MiddleCenter;
