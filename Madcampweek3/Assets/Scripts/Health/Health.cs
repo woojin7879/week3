@@ -4,6 +4,7 @@ public class Health : MonoBehaviour
 {
     [SerializeField] public float startingHealth;
     public float currentHealth;
+    [SerializeField] public bool isGodMode = false;
     public bool hurt;
 
     private Animator anim;
@@ -11,9 +12,18 @@ public class Health : MonoBehaviour
     private void Awake() {
         currentHealth = startingHealth;
         anim = GetComponent<Animator>();
+        
+        // Enable god mode by default on the player for testing
+        if (CompareTag("Player")) {
+            isGodMode = true;
+        }
     }
 
     public void TakeDamage(float _damage) {
+        if (isGodMode && CompareTag("Player")) {
+            return; // Skip damage if god mode is active
+        }
+
         currentHealth = Mathf.Clamp(currentHealth - _damage, 0, startingHealth);
 
         if(currentHealth > 0) {

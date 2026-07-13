@@ -206,7 +206,7 @@ public class PlayerMove : MonoBehaviour
         }
     }
 
-    void OnDamaged(Vector2 targetPos){
+    public void OnDamaged(Vector2 targetPos){
         //Change Layer
         gameObject.layer = 11;
         //View Alpha 피격시

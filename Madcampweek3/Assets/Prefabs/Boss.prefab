@@ -149,6 +149,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nextMove: 0
   health: {fileID: 2675580747616566034}
+  snowballPrefab: {fileID: 100000, guid: 5b7eb03825dee7208000000000000000, type: 3}
 --- !u!114 &2675580747616566034
 MonoBehaviour:
   m_ObjectHideFlags: 0
