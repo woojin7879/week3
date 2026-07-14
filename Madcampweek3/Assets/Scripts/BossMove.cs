@@ -18,10 +18,13 @@ public class BossMove : MonoBehaviour
     [SerializeField] float chaseRange = 18f;
     [SerializeField] private GameObject snowballPrefab;
     [SerializeField] private float[] waveYLevels = new float[] { -4.5f, -1.5f, 1.5f, 4.5f, 7.5f };
+    [SerializeField] private AudioClip hurtSound;
+    [SerializeField] private AudioClip rageSound;
     
     private bool isCharging = false;
     private bool isDead = false;
     private float lastHurtTime = -999f;
+    private bool hasTriggeredRageSound = false;
 
     void Awake() {
         rigid = GetComponent<Rigidbody2D>();
@@ -113,8 +116,8 @@ public class BossMove : MonoBehaviour
         Invoke("Think", nextThinkTime);
     }
 
-    bool isRageMode() {
-        return health != null && health.currentHealth < health.startingHealth * 0.3f;
+    public bool isRageMode() {
+        return health != null && health.currentHealth <= health.startingHealth * 0.3f;
     }
 
     IEnumerator AILoop() {
@@ -325,6 +328,17 @@ public class BossMove : MonoBehaviour
 
     public void OnDamaged(){
         if (isDead) return;
+
+        if (isRageMode() && !hasTriggeredRageSound) {
+            hasTriggeredRageSound = true;
+            if (rageSound != null && SoundManager.instance != null) {
+                SoundManager.instance.PlaySound(rageSound);
+            }
+        } else {
+            if (hurtSound != null && SoundManager.instance != null) {
+                SoundManager.instance.PlaySound(hurtSound);
+            }
+        }
 
         if(health.currentHealth <= 0) {
             isDead = true;
