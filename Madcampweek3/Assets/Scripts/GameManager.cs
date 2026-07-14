@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
     public Color color;
 
     public int stage;
+    private bool isDeathUIActive = false;
     private void Awake() {
         stage = int.Parse(SceneManager.GetActiveScene().name);
         color = StageNum.color;
@@ -41,7 +42,11 @@ public class GameManager : MonoBehaviour
     private void Update() {
         if(playerHealth.currentHealth == 0){
             player.OnDie();
-            Invoke("PlayerReposition",1);
+            if (!isDeathUIActive) {
+                isDeathUIActive = true;
+                ShowDeathUI();
+            }
+            Invoke("PlayerReposition", 1.5f); // Increased delay slightly to show Death UI
         }
     }
     
@@ -190,6 +195,70 @@ public class GameManager : MonoBehaviour
                 PlayerPrefs.SetFloat(prefix + "_" + i, records[i].Item1);
                 PlayerPrefs.SetInt(prefix + "_" + i + "_deaths", records[i].Item2);
             }
+        }
+    }
+
+    private void ShowDeathUI() {
+        GameObject canvasGo = new GameObject("DeathCanvas");
+        Canvas canvas = canvasGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 9999; // Top-most overlay
+        canvasGo.AddComponent<CanvasScaler>();
+
+        // Dark red-black background overlay
+        GameObject panelGo = new GameObject("Background");
+        panelGo.transform.SetParent(canvasGo.transform, false);
+        Image panelImg = panelGo.AddComponent<Image>();
+        panelImg.color = new Color(0.12f, 0.01f, 0.01f, 0.78f); // Transparent blood red overlay
+
+        RectTransform panelRect = panelGo.GetComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+
+        // "YOU DIED" / "사 망" Text
+        GameObject textGo = new GameObject("DeathText");
+        textGo.transform.SetParent(panelGo.transform, false);
+        Text deathText = textGo.AddComponent<Text>();
+        deathText.text = "사 망";
+        deathText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        deathText.color = new Color(0.9f, 0.1f, 0.1f, 1f); // Bright blood red
+        deathText.fontSize = 64;
+        deathText.fontStyle = FontStyle.Bold;
+        deathText.alignment = TextAnchor.MiddleCenter;
+
+        RectTransform textRect = textGo.GetComponent<RectTransform>();
+        textRect.sizeDelta = new Vector2(500, 100);
+        textRect.anchoredPosition = new Vector2(0, 30);
+
+        // Shadow for text
+        Outline outline = textGo.AddComponent<Outline>();
+        outline.effectColor = Color.black;
+        outline.effectDistance = new Vector2(2, -2);
+
+        // Subtitle text (Mode specific info)
+        GameObject subGo = new GameObject("SubtitleText");
+        subGo.transform.SetParent(panelGo.transform, false);
+        Text subText = subGo.AddComponent<Text>();
+        subText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        subText.color = Color.white;
+        subText.fontSize = 20;
+        subText.alignment = TextAnchor.MiddleCenter;
+
+        RectTransform subRect = subGo.GetComponent<RectTransform>();
+        subRect.sizeDelta = new Vector2(500, 80);
+        subRect.anchoredPosition = new Vector2(0, -50);
+
+        int gameMode = PlayerPrefs.GetInt("GameMode", 0);
+        if (gameMode == 2) { // Hell Mode
+            subText.text = "헬 모드 실패!\n처음 단계(1-1)부터 다시 시작합니다...";
+            subText.color = new Color(1f, 0.7f, 0.2f, 1f); // Warning orange
+        } else if (gameMode == 1) { // Time Attack
+            int deaths = PlayerPrefs.GetInt("timeAttackDeaths", 0);
+            subText.text = $"타임어택 재시도 중...\n현재 누적 사망: {deaths}회";
+        } else { // Normal Mode
+            subText.text = "구역 재시도 중...";
         }
     }
 }

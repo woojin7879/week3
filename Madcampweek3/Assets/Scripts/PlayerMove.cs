@@ -35,6 +35,7 @@ public class PlayerMove : MonoBehaviour
         anim = GetComponent<Animator>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
         health = GetComponent<Health>();
+        gameObject.layer = 10; // Ensure player starts on Player layer to prevent self-grounding/walling on Default layer
         gameManager.cnt_dotory = 0;
         cnt_hurt_frame = 0;
         isGliding = false;
@@ -99,7 +100,7 @@ public class PlayerMove : MonoBehaviour
             //Move by Control
             float h = Input.GetAxisRaw("Horizontal");
             if(h != 0){
-                if(int.Parse(SceneManager.GetActiveScene().name) >=10 && isGrounded()) rigid.AddForce(new Vector2(h/50, 0), ForceMode2D.Impulse);
+                if(int.Parse(SceneManager.GetActiveScene().name) >=10 && isGrounded()) rigid.AddForce(new Vector2(h / 6f, 0), ForceMode2D.Impulse);
                 else rigid.AddForce(new Vector2(h, 0), ForceMode2D.Impulse);
             }
             anim.SetBool("isWalljumping", false);
@@ -110,23 +111,26 @@ public class PlayerMove : MonoBehaviour
             rigid.linearVelocity = new Vector2(maxSpeed, rigid.linearVelocity.y);
         else if (rigid.linearVelocity.x < maxSpeed * (-1) && isGrounded())
             rigid.linearVelocity = new Vector2(maxSpeed * (-1), rigid.linearVelocity.y);
-        if (rigid.linearVelocity.x > 5)
-            rigid.linearVelocity = new Vector2(5, rigid.linearVelocity.y);
-        else if (rigid.linearVelocity.x < 5 * (-1))
-            rigid.linearVelocity = new Vector2(5 * (-1), rigid.linearVelocity.y);
+        float maxAirSpeed = (wallJumpCooldown <= 1.0f) ? 15f : 5f;
+        if (rigid.linearVelocity.x > maxAirSpeed)
+            rigid.linearVelocity = new Vector2(maxAirSpeed, rigid.linearVelocity.y);
+        else if (rigid.linearVelocity.x < maxAirSpeed * (-1))
+            rigid.linearVelocity = new Vector2(maxAirSpeed * (-1), rigid.linearVelocity.y);
 
         //Landing Platform
-        if(rigid.linearVelocity.y<0){
-            Debug.DrawRay(rigid.position, Vector3.down, new Color(0,1,0));
-            if(isGrounded()){
-                glideCooldown = 0;
-                anim.SetBool("isJumping", false);
-            }
+        if (isGrounded() && rigid.linearVelocity.y <= 0.01f) {
+            glideCooldown = 0;
+            anim.SetBool("isJumping", false);
         }
     }
 
     private void Jump() {
+        // Prevent jumping during the active knockback phase of being hurt (approx. 0.4 seconds / 25 frames)
+        if (health.hurt && cnt_hurt_frame < 25) return;
+
         if(isGrounded()) {
+            // Reset vertical velocity first to prevent cumulative force/velocity bugs (super-jumps)
+            rigid.linearVelocity = new Vector2(rigid.linearVelocity.x, 0);
             rigid.AddForce(Vector2.up * jumPower, ForceMode2D.Impulse);
             SoundManager.instance.PlaySound(jumpSound);
             anim.SetBool("isJumping", true);
@@ -143,8 +147,14 @@ public class PlayerMove : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D collision) {
         if(collision.gameObject.tag == "Enemy"){
-            //Attack
-            if(rigid.linearVelocity.y < 0 && transform.position.y > collision.transform.position.y){
+            bool isStomp = false;
+            if (collision.contactCount > 0) {
+                // If collision normal points upwards (enemy is below player), it's a stomp!
+                if (collision.contacts[0].normal.y > 0.5f) {
+                    isStomp = true;
+                }
+            }
+            if(isStomp){
                 OnAttack(collision.transform);
             }else{
                 health.TakeDamage(1);
@@ -156,8 +166,14 @@ public class PlayerMove : MonoBehaviour
             OnDamaged(collision.transform.position);
         }
         if(collision.gameObject.tag == "Boss"){
-            //Attack
-            if(rigid.linearVelocity.y < 0 && transform.position.y > collision.transform.position.y){
+            bool isStomp = false;
+            if (collision.contactCount > 0) {
+                // If collision normal points upwards (boss is below player), it's a stomp!
+                if (collision.contacts[0].normal.y > 0.5f) {
+                    isStomp = true;
+                }
+            }
+            if(isStomp){
                 OnAttackBoss(collision.transform);
             }else{
                 health.TakeDamage(1);
@@ -183,7 +199,7 @@ public class PlayerMove : MonoBehaviour
             //Deactivate Item
             collision.gameObject.SetActive(false);
         }
-        if(collision.gameObject.tag == "Finish" && gameManager.cnt_dotory == 3){
+        if(collision.gameObject.tag == "Finish" && gameManager.cnt_dotory >= 3){
             //Finish -> to Next Stage
             gameManager.NextStage();
         }
@@ -203,6 +219,13 @@ public class PlayerMove : MonoBehaviour
         if(collision.gameObject.tag == "Tutorial2"){
             collision.gameObject.SetActive(false);
             isTutorial1 = true;
+        }
+    }
+
+    void OnTriggerStay2D(Collider2D collision) {
+        if(collision.gameObject.tag == "Finish" && gameManager.cnt_dotory >= 3){
+            //Finish -> to Next Stage (handles cases where portal is activated while player is already inside)
+            gameManager.NextStage();
         }
     }
 
@@ -238,16 +261,23 @@ public class PlayerMove : MonoBehaviour
     }
 
     void OnAttackBoss(Transform boss){
-        //Point
-        gameManager.stagePoint += 100;
-        //Reaction Force
-        rigid.AddForce(Vector2.up * 10, ForceMode2D.Impulse);
+        // Calculate bounce direction away from the boss center
+        float pushDir = transform.position.x - boss.position.x >= 0 ? 1f : -1f;
 
-        //Enemy die
+        // Lock horizontal controls temporarily (for 0.5 seconds) to prevent immediate steering override
+        wallJumpCooldown = 0.5f;
+
+        // Set velocity directly for a much stronger horizontal bounce (sideways 12, upward 8)
+        rigid.linearVelocity = new Vector2(pushDir * 12f, 8f);
+
         BossMove bossMove = boss.GetComponent<BossMove>();
-        bossMove.health.TakeDamage(1);
-        if(bossMove.health.currentHealth <= 0)
-            bossMove.OnDamaged();
+        if (bossMove != null) {
+            bool success = bossMove.TakeStompDamage(1);
+            if (success) {
+                // Point only when actual damage is dealt (not during cooldown)
+                gameManager.stagePoint += 100;
+            }
+        }
     }
 
     public void VelocityZero(){
@@ -255,12 +285,19 @@ public class PlayerMove : MonoBehaviour
     }
 
     private bool isGrounded() {
-        RaycastHit2D raycastHit = Physics2D.BoxCast(capsuleCollider.bounds.center, capsuleCollider.bounds.size * 0.9f, 0, Vector2.down, 0.1f, groundLayer);
+        // Platform (groundLayer), Default (0), Fake (14), and FloatingPlatform (16) layers
+        int layerMask = groundLayer.value | (1 << 0) | (1 << 14) | (1 << 16);
+        Vector2 size = new Vector2(capsuleCollider.bounds.size.x * 0.8f, 0.1f);
+        // Offset origin slightly below the capsule collider bottom (by 0.02f) to prevent self-collision
+        Vector2 origin = (Vector2)capsuleCollider.bounds.center + Vector2.down * (capsuleCollider.bounds.size.y / 2f + 0.02f);
+        RaycastHit2D raycastHit = Physics2D.BoxCast(origin, size, 0, Vector2.down, 0.1f, layerMask);
         return raycastHit.collider != null;
     }
 
     private bool onWall() {
-        RaycastHit2D raycastHit = Physics2D.BoxCast(capsuleCollider.bounds.center, capsuleCollider.bounds.size, 0, new Vector2(transform.localScale.x, 0), 0.3f, groundLayer);
+        // Platform (groundLayer), Default (0), Fake (14), and FloatingPlatform (16) layers
+        int layerMask = groundLayer.value | (1 << 0) | (1 << 14) | (1 << 16);
+        RaycastHit2D raycastHit = Physics2D.BoxCast(capsuleCollider.bounds.center, capsuleCollider.bounds.size, 0, new Vector2(transform.localScale.x, 0), 0.3f, layerMask);
         return raycastHit.collider != null;
     }
 

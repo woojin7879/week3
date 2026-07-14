@@ -52,8 +52,10 @@ public class Snowball : MonoBehaviour
                 Destroy(gameObject);
             }
         }
-        // Destroy when hitting the main ground (Platform). Passes through FloatingPlatform.
-        else if (collision.gameObject.layer == LayerMask.NameToLayer("Platform")) {
+        // Destroy when hitting solid terrain (Platform, Default, Fake). Passes through FloatingPlatform.
+        else if (collision.gameObject.layer == LayerMask.NameToLayer("Platform") ||
+                 collision.gameObject.layer == LayerMask.NameToLayer("Default") ||
+                 collision.gameObject.layer == LayerMask.NameToLayer("Fake")) {
             Destroy(gameObject);
         }
     }

@@ -11,9 +11,12 @@ public class EndingScript : MonoBehaviour
  public Image ring;
     int cnt = 0;          
     string[] intro = new string[]{"혼자 힘으로 도토리를 왕창 모은 다람이는 따뜻한 굴안에서 겨울잠에 들었습니다.", "다람이는..","행복한 꿈을..","꾸었을까요..?"};
+    private float sceneStartTime;
+
     // Use this for initialization
     void Start()
     {
+        sceneStartTime = Time.time;
         int gameMode = PlayerPrefs.GetInt("GameMode", 0);
         if (gameMode == 1 || gameMode == 2) { // Time Attack (1) or Hell (2)
             float finalTime = 0f;
@@ -50,6 +53,9 @@ public class EndingScript : MonoBehaviour
     // Update is called once per frame
     void Update ()
     {
+        // Ignore Space key for the first 2 seconds to prevent accidental transition skips
+        if (Time.time - sceneStartTime < 2.0f) return;
+
         if (Input.GetKeyDown(KeyCode.Space)==true)
         {
             if(cnt>=3) 

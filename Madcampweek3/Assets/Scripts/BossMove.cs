@@ -21,6 +21,7 @@ public class BossMove : MonoBehaviour
     
     private bool isCharging = false;
     private bool isDead = false;
+    private float lastHurtTime = -999f;
 
     void Awake() {
         rigid = GetComponent<Rigidbody2D>();
@@ -83,7 +84,7 @@ public class BossMove : MonoBehaviour
         // Platform / Wall Check
         Vector2 frontVec = new Vector2(rigid.position.x + nextMove * 0.5f, rigid.position.y);
         Debug.DrawRay(frontVec, Vector3.down, new Color(0,1,0));
-        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(nextMove), 0), 1.5f, LayerMask.GetMask("Platform"));
+        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, new Vector2(Mathf.Sign(nextMove), 0), 1.5f, LayerMask.GetMask("Platform", "Default", "Fake", "FloatingPlatform"));
         if(rayHit.collider != null && rayHit.distance < 0.8f){
             nextMove *= -1;
             if (!isCharging) {
@@ -164,7 +165,7 @@ public class BossMove : MonoBehaviour
         spriteRenderer.flipX = (chargeDir == 1);
         nextMove = (int)chargeDir;
         
-        float dashSpeed = isRageMode() ? 25f : 16f;
+        float dashSpeed = isRageMode() ? 19f : 12f;
         float dashDuration = 0.8f;
         elapsed = 0f;
         
@@ -341,5 +342,19 @@ public class BossMove : MonoBehaviour
         spriteRenderer.color = new Color(1, 0.4f, 0.4f, 0.6f);
         yield return new WaitForSeconds(0.2f);
         spriteRenderer.color = isRageMode() ? new Color(1f, 0.5f, 0.5f, 1f) : Color.white;
+    }
+
+    public bool TakeStompDamage(float damage) {
+        if (isDead) return false;
+        
+        // Cooldown check (3 seconds)
+        if (Time.time - lastHurtTime < 3.0f) {
+            return false;
+        }
+        
+        lastHurtTime = Time.time;
+        health.TakeDamage(damage);
+        OnDamaged();
+        return true;
     }
 }
