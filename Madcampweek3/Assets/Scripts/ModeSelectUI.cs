@@ -165,6 +165,10 @@ public class ModeSelectUI : MonoBehaviour
         btnGo.transform.SetParent(parent, false);
 
         Button btn = btnGo.AddComponent<Button>();
+        Navigation customNav = new Navigation();
+        customNav.mode = Navigation.Mode.None;
+        btn.navigation = customNav;
+
         Image img = btnGo.AddComponent<Image>();
         img.color = normalColor;
         btn.targetGraphic = img;

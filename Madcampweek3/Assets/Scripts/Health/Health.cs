@@ -12,11 +12,6 @@ public class Health : MonoBehaviour
     private void Awake() {
         currentHealth = startingHealth;
         anim = GetComponent<Animator>();
-        
-        // Enable god mode by default on the player for testing
-        if (CompareTag("Player")) {
-            isGodMode = true;
-        }
     }
 
     public void TakeDamage(float _damage) {

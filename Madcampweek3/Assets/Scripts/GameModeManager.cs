@@ -4,7 +4,19 @@ using UnityEngine.SceneManagement;
 
 public class GameModeManager : MonoBehaviour
 {
-    public static GameModeManager Instance { get; private set; }
+    private static GameModeManager _instance;
+    public static GameModeManager Instance {
+        get {
+            if (_instance == null) {
+                _instance = FindObjectOfType<GameModeManager>();
+                if (_instance == null) {
+                    GameObject go = new GameObject("GameModeManager");
+                    _instance = go.AddComponent<GameModeManager>();
+                }
+            }
+            return _instance;
+        }
+    }
 
     public enum GameMode { Normal, TimeAttack, Hell }
     public GameMode currentMode = GameMode.Normal;
@@ -16,11 +28,11 @@ public class GameModeManager : MonoBehaviour
     private Text timerText;
 
     private void Awake() {
-        if (Instance != null && Instance != this) {
+        if (_instance != null && _instance != this) {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
 
         // Load saved mode if present

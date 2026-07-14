@@ -29,6 +29,11 @@ public class BossMove : MonoBehaviour
         capsuleCollider = GetComponent<CapsuleCollider2D>();
         health = GetComponent<Health>();
         anim = GetComponent<Animator>();
+
+        if (health != null) {
+            health.startingHealth = 15f;
+            health.currentHealth = 15f;
+        }
         
         GameObject playerObj = GameObject.FindWithTag("Player");
         if (playerObj != null) {
@@ -109,7 +114,7 @@ public class BossMove : MonoBehaviour
     }
 
     bool isRageMode() {
-        return health != null && health.currentHealth <= health.startingHealth / 2.0f;
+        return health != null && health.currentHealth < health.startingHealth * 0.3f;
     }
 
     IEnumerator AILoop() {
